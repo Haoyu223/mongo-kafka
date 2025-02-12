@@ -21,13 +21,21 @@ import static com.mongodb.kafka.connect.sink.MongoSinkTask.LOGGER;
 import static com.mongodb.kafka.connect.sink.MongoSinkTopicConfig.BULK_WRITE_ORDERED_CONFIG;
 import static com.mongodb.kafka.connect.util.TimeseriesValidation.validateCollection;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.OptionalLong;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mongodb.client.model.Filters;
+import com.mongodb.kafka.connect.util.resource.*;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.alter.Alter;
+import net.sf.jsqlparser.statement.alter.AlterExpression;
+import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
+import net.sf.jsqlparser.statement.drop.Drop;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -49,6 +57,8 @@ import com.mongodb.kafka.connect.util.jmx.internal.MBeanServerUtils;
 import com.mongodb.kafka.connect.util.time.InnerOuterTimer;
 import com.mongodb.kafka.connect.util.time.InnerOuterTimer.InnerTimer;
 import com.mongodb.kafka.connect.util.time.Timer;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 
 final class StartedMongoSinkTask implements AutoCloseable {
   private final MongoSinkConfig sinkConfig;
@@ -115,7 +125,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
                 records, sinkConfig, errorReporter);
         statistics.getProcessingPhases().sample(processingTime.getElapsedTime().toMillis());
         for (List<MongoProcessedSinkRecordData> batch : batches) {
-          bulkWriteBatch(batch);
+          processDdl(batch);
         }
       }
     }
@@ -133,6 +143,221 @@ final class StartedMongoSinkTask implements AutoCloseable {
     }
   }
 
+  private void processDdl(final List<MongoProcessedSinkRecordData> batch) {
+    if (batch.isEmpty()) {
+      return;
+    }
+
+    for(final MongoProcessedSinkRecordData recordData : batch) {
+      MongoSinkTopicConfig config = recordData.getConfig();
+
+      SinkRecord record = recordData.getSinkRecord();
+      String ddl = objectToDdlString(record.value());
+
+      if(null != ddl){
+        LOGGER.debug("parsing ddl statement: {}", ddl);
+        parseDdl(ddl);
+      }else{
+        LOGGER.debug("The ddl is null, or transfer failed, topic:{}, partition:{}, offset:{}", record.topic(), record.kafkaPartition(), record.kafkaOffset());
+      }
+
+      checkRateLimit(config);
+    }
+  }
+
+  private void parseDdl(final String ddl) {
+    try{
+//      MongoNamespace namespace = recordData.getNamespace();
+
+      Statement statement = CCJSqlParserUtil.parse(ddl);
+
+      if(statement instanceof CreateTable){
+        processCreateTable((CreateTable) statement);
+      }else if(statement instanceof Alter){
+        processAlter((Alter) statement);
+      }else if(statement instanceof Drop){
+        processDrop((Drop) statement);
+      }
+
+    }catch (Exception e){
+      LOGGER.debug("error parsing DDL: {}, message: {}", ddl, e.getMessage());
+    }
+  }
+
+  private void processCreateTable(final CreateTable createTable){
+    //could deal with createTable.isIfNotExists()
+    String table = createTable.getTable().getName();
+    if(CollectionUtils.isNotEmpty(createTable.getColumnDefinitions())){
+      Map<String, String> contentMap = createTable.getColumnDefinitions().stream()
+              .collect(Collectors.toMap(
+                      ColumnDefinition::getColumnName,
+                      cd -> cd.getColDataType().getDataType(),
+                      (existing, replacement) -> existing,
+                      HashMap::new
+              ));
+
+      //try to create collection first
+      //this step may throw error, since the table may exist
+      mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE)
+              .createCollection(table);
+      LOGGER.debug("created table success: {}", table);
+
+      //check schema meta exist or not
+      Bson query = Filters.and(
+              Filters.eq(MongoResourceConstant.RESOURCE_NAME, table),
+              Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID)
+      );
+      Document result = mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE)
+              .getCollection(MongoResourceConstant.RESOURCE_META)
+              .find(query).first();
+      if(result == null){
+        //add a message to resource_meta
+        CreateResourceSchemaVO schemaVO = prepareResourceSchema(table, contentMap);
+        Document document = ResourceMetaUtil.generateDocumentFromResourceMetaDTO(schemaVO);
+
+        //todo need to change database
+        mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE)
+                .getCollection(MongoResourceConstant.RESOURCE_META)
+                .insertOne(document);
+        LOGGER.debug("Inserted document to mongo success: {}", document.toJson());
+      }else{
+        LOGGER.debug("resource_meta has exist record, create operation paused. table: {}, tenant: {}, message: {}", table, MongoResourceConstant.DEMO_TENANTID, result.toJson());
+      }
+    }
+  }
+
+  private void processAlter(final Alter alter){
+    String table = alter.getTable().getName();
+    for(AlterExpression expression : alter.getAlterExpressions()){
+      if(CollectionUtils.isNotEmpty(expression.getColDataTypeList())){
+
+        //check schema meta exist or not
+        Bson query = Filters.and(
+                Filters.eq(MongoResourceConstant.RESOURCE_NAME, table),
+                Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID)
+        );
+        Document result = mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE)
+                .getCollection(MongoResourceConstant.RESOURCE_META)
+                .find(query).first();
+
+        if(result != null){
+          //todo might need to change DTO
+          List<ResourceFieldMetaDTO> resourceFieldMetaList = result.getList(MongoResourceConstant.RESOURCE_FIELD_LIST, ResourceFieldMetaDTO.class);
+
+          String operation = expression.getOperation().toString();
+          Map<String, String> contentMap = expression.getColDataTypeList().stream()
+                  .collect(Collectors.toMap(
+                          AlterExpression.ColumnDataType::getColumnName,
+                          cd -> cd.getColDataType().getDataType(),
+                          (existing, replacement) -> existing,
+                          HashMap::new
+                  ));
+
+          List<ResourceFieldMetaDTO> dtos = updateResourceFieldMetaDTOS(resourceFieldMetaList, contentMap, operation);
+          result.put(MongoResourceConstant.RESOURCE_FIELD_LIST, dtos);
+
+          mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE)
+                  .getCollection(MongoResourceConstant.RESOURCE_META)
+                  .replaceOne(Filters.eq(MongoResourceConstant.RESERVED_FIELD_UNDERSCORE_ID, result.get(MongoResourceConstant.RESERVED_FIELD_UNDERSCORE_ID)), result);
+
+          LOGGER.debug("Altered resource fields success: {}", result.toJson());
+        }
+
+      }
+    }
+  }
+
+  private void processDrop(final Drop drop){
+    if(drop.getType() != null && drop.getType().equalsIgnoreCase(MongoResourceConstant.TABLE)){
+      String table = drop.getName().getName();
+      //todo need to change database
+      mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE)
+              .getCollection(table)
+              .drop();
+      LOGGER.debug("dropped table success: {}", table);
+    }
+  }
+
+  private CreateResourceSchemaVO prepareResourceSchema(String table, Map<String, String> contentMap){
+    CreateResourceSchemaVO createResourceSchemaVO = new CreateResourceSchemaVO();
+    //todo fix demo
+    createResourceSchemaVO.setTenantId(MongoResourceConstant.DEMO_TENANTID);
+    createResourceSchemaVO.setResourceName(table);
+
+    Map<String, String> resourceDisplayName = new LinkedHashMap<>();
+    resourceDisplayName.put(Language.en.name(), table);
+    createResourceSchemaVO.setResourceDisplayName(resourceDisplayName);
+
+    List<ResourceFieldMetaDTO> resourceFieldMetaList = getResourceFieldMetaDTOS(contentMap);
+
+    createResourceSchemaVO.setResourceFieldMetaList(resourceFieldMetaList);
+    return createResourceSchemaVO;
+  }
+
+  private List<ResourceFieldMetaDTO> getResourceFieldMetaDTOS(Map<String, String> contentMap) {
+    List<ResourceFieldMetaDTO> resourceFieldMetaList = new ArrayList<>();
+    for(String column : contentMap.keySet()){
+      ResourceFieldMetaDTO fieldMetaDTO = new ResourceFieldMetaDTO();
+      fieldMetaDTO.setFieldName(column);
+      Map<String, String> fieldDesc = new LinkedHashMap<>();
+      fieldDesc.put(Language.en.name(), column);
+      fieldMetaDTO.setFieldDesc(fieldDesc);
+      fieldMetaDTO.setRequired(true);
+      //todo extend
+      fieldMetaDTO.setDataType((contentMap.get(column).contains("TIME")
+              || contentMap.get(column).contains("DATE")
+              || contentMap.get(column).contains("YEAR")) ? DataType.DATE : DataType.STRING);
+      resourceFieldMetaList.add(fieldMetaDTO);
+    }
+    return resourceFieldMetaList;
+  }
+
+  private List<ResourceFieldMetaDTO> updateResourceFieldMetaDTOS(List<ResourceFieldMetaDTO> resourceFieldMetaDTOS, Map<String, String> contentMap, String operation){
+    List<ResourceFieldMetaDTO> result = new ArrayList<>(resourceFieldMetaDTOS);
+    if(operation != null && operation.equalsIgnoreCase(MongoResourceConstant.ADD)){
+      for(String column : contentMap.keySet()){
+        ResourceFieldMetaDTO fieldMetaDTO = new ResourceFieldMetaDTO();
+        fieldMetaDTO.setFieldName(column);
+        Map<String, String> fieldDesc = new LinkedHashMap<>();
+        fieldDesc.put(Language.en.name(), column);
+        fieldMetaDTO.setFieldDesc(fieldDesc);
+        fieldMetaDTO.setRequired(true);
+        //todo extend
+        fieldMetaDTO.setDataType((contentMap.get(column).contains("TIME")
+                || contentMap.get(column).contains("DATE")
+                || contentMap.get(column).contains("YEAR")) ? DataType.DATE : DataType.STRING);
+        result.add(fieldMetaDTO);
+      }
+    }else if(operation != null && operation.equalsIgnoreCase(MongoResourceConstant.DROP) && !contentMap.isEmpty()){
+      for(ResourceFieldMetaDTO dto : resourceFieldMetaDTOS){
+        String fieldName = dto.getFieldName();
+        if(contentMap.containsKey(fieldName)){
+          result.remove(dto);
+        }
+      }
+    }
+    return result;
+  }
+
+  private String objectToDdlString(final Object object) {
+    try{
+      ObjectMapper objectMapper = new ObjectMapper();
+      String json = objectMapper.writeValueAsString(object);
+      Map<String, Object> map = objectMapper.readValue(json, new TypeReference<Map<String, Object>>(){});
+      if (map.containsKey("ddl")) {
+        Object ddlValue = map.get("ddl");
+        if (ddlValue instanceof String) {
+          String ddl = (String) ddlValue;
+          return ddl.replaceAll("\n", " ");
+        }
+      }
+      return null;
+    }catch (Exception e){
+      return null;
+    }
+  }
+
+  @Deprecated
   private void bulkWriteBatch(final List<MongoProcessedSinkRecordData> batch) {
     if (batch.isEmpty()) {
       return;

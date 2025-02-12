@@ -53,7 +53,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Sorts;
 
-import com.mongodb.kafka.connect.MongoSinkConnector;
+import com.mongodb.kafka.connect.MongoDDLSinkConnector;
 import com.mongodb.kafka.connect.MongoSourceConnector;
 import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
@@ -499,7 +499,7 @@ public class MongoKafkaTestCase {
 
   public Properties createSinkProperties() {
     Properties props = new Properties();
-    props.put("connector.class", MongoSinkConnector.class.getName());
+    props.put("connector.class", MongoDDLSinkConnector.class.getName());
     props.put(MongoSinkConfig.CONNECTION_URI_CONFIG, MONGODB.getConnectionString().toString());
     props.put(MongoSinkTopicConfig.DATABASE_CONFIG, MONGODB.getDatabaseName());
     props.put(MongoSinkTopicConfig.COLLECTION_CONFIG, getCollectionName());

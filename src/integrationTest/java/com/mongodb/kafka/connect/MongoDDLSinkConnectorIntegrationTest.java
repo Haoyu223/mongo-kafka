@@ -55,7 +55,7 @@ import com.mongodb.kafka.connect.avro.TweetMsg;
 import com.mongodb.kafka.connect.mongodb.MongoKafkaTestCase;
 import com.mongodb.kafka.connect.util.jmx.SinkTaskStatistics;
 
-class MongoSinkConnectorIntegrationTest extends MongoKafkaTestCase {
+class MongoDDLSinkConnectorIntegrationTest extends MongoKafkaTestCase {
   private static final Random RANDOM = new Random();
 
   @Test

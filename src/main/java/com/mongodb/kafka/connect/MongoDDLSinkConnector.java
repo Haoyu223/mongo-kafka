@@ -41,10 +41,8 @@ import com.mongodb.kafka.connect.sink.MongoSinkTask;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;
 import com.mongodb.kafka.connect.util.ConfigHelper;
 
-public class MongoSinkConnector extends SinkConnector {
-  private static final List<String> REQUIRED_SINK_ACTIONS = asList("insert", "update", "remove");
-  private static final List<String> REQUIRED_COLLSTATS_SINK_ACTIONS =
-      asList("insert", "update", "remove", "collStats");
+public class MongoDDLSinkConnector extends SinkConnector {
+  private static final List<String> REQUIRED_SINK_ACTIONS = asList("createCollection", "collMod");
   private Map<String, String> settings;
 
   @Override
@@ -110,9 +108,7 @@ public class MongoSinkConnector extends SinkConnector {
                                   validateUserHasActions(
                                       client,
                                       sinkConfig.getConnectionString().getCredential(),
-                                      mongoSinkTopicConfig.isTimeseries()
-                                          ? REQUIRED_COLLSTATS_SINK_ACTIONS
-                                          : REQUIRED_SINK_ACTIONS,
+                                      REQUIRED_SINK_ACTIONS,
                                       mongoSinkTopicConfig.getString(
                                           MongoSinkTopicConfig.DATABASE_CONFIG),
                                       mongoSinkTopicConfig.getString(

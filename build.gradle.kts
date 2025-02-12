@@ -52,6 +52,8 @@ extra.apply {
     set("mongodbDriverVersion", "[4.7,4.7.99]")
     set("kafkaVersion", "2.6.0")
     set("avroVersion", "1.9.2")
+    set("jsqlVersion", "4.5")
+    set("commonsCollVersion", "4.4")
 
     // Testing dependencies
     set("junitJupiterVersion", "5.8.1")
@@ -73,6 +75,8 @@ dependencies {
     implementation("org.apache.kafka:connect-api:${project.extra["kafkaVersion"]}")
     implementation("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     implementation("org.apache.avro:avro:${project.extra["avroVersion"]}")
+    implementation("com.github.jsqlparser:jsqlparser:${project.extra["jsqlVersion"]}")
+    implementation("org.apache.commons:commons-collections4:${project.extra["commonsCollVersion"]}")
 
     mongoDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
 

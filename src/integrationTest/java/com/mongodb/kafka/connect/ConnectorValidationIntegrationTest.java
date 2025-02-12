@@ -544,7 +544,7 @@ public final class ConnectorValidationIntegrationTest {
   }
 
   private List<ConfigValue> getSinkErrors(final Map<String, String> properties) {
-    Config config = new MongoSinkConnector().validate(properties);
+    Config config = new MongoDDLSinkConnector().validate(properties);
     return config.configValues().stream()
         .filter(cv -> !cv.errorMessages().isEmpty())
         .collect(Collectors.toList());
