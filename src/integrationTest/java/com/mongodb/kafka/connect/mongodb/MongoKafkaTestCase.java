@@ -54,7 +54,6 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Sorts;
 
 import com.mongodb.kafka.connect.MongoDDLSinkConnector;
-import com.mongodb.kafka.connect.MongoSourceConnector;
 import com.mongodb.kafka.connect.embedded.EmbeddedKafka;
 import com.mongodb.kafka.connect.sink.MongoSinkConfig;
 import com.mongodb.kafka.connect.sink.MongoSinkTopicConfig;

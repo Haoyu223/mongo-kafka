@@ -5,66 +5,63 @@ import java.util.Map;
 
 public class ResourceFieldMetaDTO {
 
-    private String fieldName;
+  private String fieldName;
 
-    private Map<String, String> fieldDesc = new LinkedHashMap<>();
+  private Map<String, String> fieldDesc = new LinkedHashMap<>();
 
-    private Boolean required;
+  private Boolean required;
 
-    private DataType dataType;
+  private DataType dataType;
 
-    private ResourceFieldMetaIndex index;
+  private ResourceFieldMetaIndex index;
 
-    private DataType nestedArrayType;
+  private DataType nestedArrayType;
 
+  public void setIndex(ResourceFieldMetaIndex index) {
+    this.index = index;
+  }
 
+  public ResourceFieldMetaIndex getIndex() {
+    return index;
+  }
 
-    public void setIndex(ResourceFieldMetaIndex index) {
-        this.index = index;
-    }
+  public DataType getNestedArrayType() {
+    return nestedArrayType;
+  }
 
-    public ResourceFieldMetaIndex getIndex() {
-        return index;
-    }
+  public void setNestedArrayType(DataType nestedArrayType) {
+    this.nestedArrayType = nestedArrayType;
+  }
 
-    public DataType getNestedArrayType() {
-        return nestedArrayType;
-    }
+  public Boolean getRequired() {
+    return required;
+  }
 
-    public void setNestedArrayType(DataType nestedArrayType) {
-        this.nestedArrayType = nestedArrayType;
-    }
+  public DataType getDataType() {
+    return dataType;
+  }
 
-    public Boolean getRequired() {
-        return required;
-    }
+  public Map<String, String> getFieldDesc() {
+    return fieldDesc;
+  }
 
-    public DataType getDataType() {
-        return dataType;
-    }
+  public String getFieldName() {
+    return fieldName;
+  }
 
-    public Map<String, String> getFieldDesc() {
-        return fieldDesc;
-    }
+  public void setDataType(DataType dataType) {
+    this.dataType = dataType;
+  }
 
-    public String getFieldName() {
-        return fieldName;
-    }
+  public void setFieldDesc(Map<String, String> fieldDesc) {
+    this.fieldDesc = fieldDesc;
+  }
 
-    public void setDataType(DataType dataType) {
-        this.dataType = dataType;
-    }
+  public void setFieldName(String fieldName) {
+    this.fieldName = fieldName;
+  }
 
-    public void setFieldDesc(Map<String, String> fieldDesc) {
-        this.fieldDesc = fieldDesc;
-    }
-
-    public void setFieldName(String fieldName) {
-        this.fieldName = fieldName;
-    }
-
-    public void setRequired(Boolean required) {
-        this.required = required;
-    }
-
+  public void setRequired(Boolean required) {
+    this.required = required;
+  }
 }

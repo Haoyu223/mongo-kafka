@@ -144,7 +144,7 @@ buildConfig {
     className("Versions")
     packageName("com.mongodb.kafka.connect")
     useJavaOutput()
-    buildConfigField("String", "NAME", "\"mongo-kafka\"")
+    buildConfigField("String", "NAME", "\"mongo-kafka-ddl\"")
     buildConfigField("String", "VERSION", provider { "\"${gitVersion}\"" })
 }
 
@@ -276,7 +276,7 @@ tasks.register<ShadowJar>("allJar") {
 }
 
 tasks.withType<ShadowJar> {
-    archiveAppendix.set("connect")
+    archiveAppendix.set("connect-ddl")
     doLast {
         val fatJar = archiveFile.get().asFile
         val fatJarSize = "%.4f".format(fatJar.length().toDouble() / (1_000 * 1_000))
@@ -307,7 +307,7 @@ tasks.register<Jar>("javadocJar") {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            artifactId = "mongo-kafka-connect"
+            artifactId = "mongo-kafka-connect-ddl"
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
@@ -408,7 +408,7 @@ tasks.register("publishArchives") {
 
 // Confluent Archive
 val releaseDate by extra(DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.now()))
-val archiveFilename = "mongodb-kafka-connect-mongodb"
+val archiveFilename = "mongodb-kafka-connect-mongodb-ddl"
 tasks.register<Copy>("prepareConfluentArchive") {
     group = "Confluent"
     description = "Prepares the Confluent Archive ready for the hub"
@@ -425,7 +425,7 @@ tasks.register<Copy>("prepareConfluentArchive") {
     }
 
     from("config") {
-        include(listOf("MongoSinkConnector.properties", "MongoSourceConnector.properties"))
+        include(listOf("MongoSinkConnector.properties"))
         into("etc")
     }
 
