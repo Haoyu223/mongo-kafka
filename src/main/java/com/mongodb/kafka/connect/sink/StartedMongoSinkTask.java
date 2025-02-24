@@ -118,7 +118,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       statistics.getRecords().sample(records.size());
       trackLatestRecordTimestampOffset(records);
       if (records.isEmpty()) {
-        LOGGER.debug("No sink records to process for current poll operation");
+        LOGGER.info("No sink records to process for current poll operation");
       } else {
         Timer processingTime = Timer.start();
         List<List<MongoProcessedSinkRecordData>> batches =
@@ -156,10 +156,10 @@ final class StartedMongoSinkTask implements AutoCloseable {
       String ddl = objectToDdlString(record.value());
 
       if (null != ddl) {
-        LOGGER.debug("parsing ddl statement: {}", ddl);
+        LOGGER.info("parsing ddl statement: {}", ddl);
         parseDdl(ddl);
       } else {
-        LOGGER.debug(
+        LOGGER.info(
             "The ddl is null, or transfer failed, topic:{}, partition:{}, offset:{}",
             record.topic(),
             record.kafkaPartition(),
@@ -185,7 +185,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       }
 
     } catch (Exception e) {
-      LOGGER.debug("error parsing DDL: {}, message: {}", ddl, e.getMessage());
+      LOGGER.warn("error parsing DDL: {}, message: {}", ddl, e.getMessage());
     }
   }
 
@@ -205,7 +205,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       // try to create collection first
       // this step may throw error, since the table may exist
       mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE).createCollection(table);
-      LOGGER.debug("created table success: {}", table);
+      LOGGER.info("created table success: {}", table);
 
       // check schema meta exist or not
       Bson query =
@@ -228,9 +228,9 @@ final class StartedMongoSinkTask implements AutoCloseable {
             .getDatabase(MongoResourceConstant.TEST_DATABASE)
             .getCollection(MongoResourceConstant.RESOURCE_META)
             .insertOne(document);
-        LOGGER.debug("Inserted document to mongo success: {}", document.toJson());
+        LOGGER.info("Inserted document to mongo success: {}", document.toJson());
       } else {
-        LOGGER.debug(
+        LOGGER.info(
             "resource_meta has exist record, create operation paused. table: {}, tenant: {}, message: {}",
             table,
             MongoResourceConstant.DEMO_TENANTID,
@@ -284,7 +284,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
                       result.get(MongoResourceConstant.RESERVED_FIELD_UNDERSCORE_ID)),
                   result);
 
-          LOGGER.debug("Altered resource fields success: {}", result.toJson());
+          LOGGER.info("Altered resource fields success: {}", result.toJson());
         }
       }
     }
@@ -295,7 +295,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       String table = drop.getName().getName();
       // todo need to change database
       mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE).getCollection(table).drop();
-      LOGGER.debug("dropped table success: {}", table);
+      LOGGER.info("dropped table success: {}", table);
     }
   }
 
