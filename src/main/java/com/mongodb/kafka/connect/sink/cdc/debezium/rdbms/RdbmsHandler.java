@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.kafka.connect.errors.DataException;
+import org.bson.BsonString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +70,7 @@ public class RdbmsHandler extends DebeziumCdcHandler {
     BsonDocument valueDoc = doc.getValueDoc().orElseGet(BsonDocument::new);
 
     if (valueDoc.isEmpty()) {
-      LOGGER.debug("Skipping debezium tombstone event for kafka topic compaction");
+      LOGGER.info("Skipping debezium tombstone event for kafka topic compaction");
       return Optional.empty();
     }
 
