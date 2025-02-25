@@ -31,4 +31,5 @@ public class MongoResourceConstant {
   public static final String TABLE = "TABLE";
   public static final String ADD = "ADD";
   public static final String DROP = "DROP";
+  public static final String QUO = "`";
 }

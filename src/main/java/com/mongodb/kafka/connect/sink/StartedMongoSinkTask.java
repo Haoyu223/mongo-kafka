@@ -57,7 +57,6 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.alter.Alter;
 import net.sf.jsqlparser.statement.alter.AlterExpression;
-import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.drop.Drop;
 
@@ -191,13 +190,13 @@ final class StartedMongoSinkTask implements AutoCloseable {
 
   private void processCreateTable(final CreateTable createTable) {
     // could deal with createTable.isIfNotExists()
-    String table = createTable.getTable().getName();
+    String table = createTable.getTable().getName().replaceAll(MongoResourceConstant.QUO, "");
     if (CollectionUtils.isNotEmpty(createTable.getColumnDefinitions())) {
       Map<String, String> contentMap =
           createTable.getColumnDefinitions().stream()
               .collect(
                   Collectors.toMap(
-                      ColumnDefinition::getColumnName,
+                      cd -> cd.getColumnName().replaceAll(MongoResourceConstant.QUO, ""),
                       cd -> cd.getColDataType().getDataType(),
                       (existing, replacement) -> existing,
                       HashMap::new));
@@ -240,7 +239,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
   }
 
   private void processAlter(final Alter alter) {
-    String table = alter.getTable().getName();
+    String table = alter.getTable().getName().replaceAll(MongoResourceConstant.QUO, "");
     for (AlterExpression expression : alter.getAlterExpressions()) {
       if (CollectionUtils.isNotEmpty(expression.getColDataTypeList())) {
 
@@ -266,7 +265,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
               expression.getColDataTypeList().stream()
                   .collect(
                       Collectors.toMap(
-                          AlterExpression.ColumnDataType::getColumnName,
+                          cd -> cd.getColumnName().replaceAll(MongoResourceConstant.QUO, ""),
                           cd -> cd.getColDataType().getDataType(),
                           (existing, replacement) -> existing,
                           HashMap::new));
@@ -292,7 +291,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
 
   private void processDrop(final Drop drop) {
     if (drop.getType() != null && drop.getType().equalsIgnoreCase(MongoResourceConstant.TABLE)) {
-      String table = drop.getName().getName();
+      String table = drop.getName().getName().replaceAll(MongoResourceConstant.QUO, "");
       // todo need to change database
       mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE).getCollection(table).drop();
       LOGGER.info("dropped table success: {}", table);

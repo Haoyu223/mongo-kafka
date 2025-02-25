@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.kafka.connect.errors.DataException;
-import org.bson.BsonString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

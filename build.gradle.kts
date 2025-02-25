@@ -79,9 +79,13 @@ dependencies {
     implementation("org.apache.commons:commons-collections4:${project.extra["commonsCollVersion"]}")
 
     mongoDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
+    mongoDependencies("com.github.jsqlparser:jsqlparser:${project.extra["jsqlVersion"]}")
+    mongoDependencies("org.apache.commons:commons-collections4:${project.extra["commonsCollVersion"]}")
 
     mongoAndAvroDependencies("org.mongodb:mongodb-driver-sync:${project.extra["mongodbDriverVersion"]}")
     mongoAndAvroDependencies("org.apache.avro:avro:${project.extra["avroVersion"]}")
+    mongoAndAvroDependencies("com.github.jsqlparser:jsqlparser:${project.extra["jsqlVersion"]}")
+    mongoAndAvroDependencies("org.apache.commons:commons-collections4:${project.extra["commonsCollVersion"]}")
 
     // Unit Tests
     testImplementation(platform("org.junit:junit-bom:${project.extra["junitJupiterVersion"]}"))

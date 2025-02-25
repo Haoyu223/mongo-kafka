@@ -50,23 +50,25 @@ public abstract class DebeziumCdcHandler extends CdcHandler {
 
       return doc.containsKey(DDL_FIELD_PATH) ? new DdlOperation() : NOOP_CDC_OPERATION;
 
-//      if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH) && doc.containsKey(DDL_FIELD_PATH)) {
-//        return NOOP_CDC_OPERATION;
-//      }
-//
-//      if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
-//          || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
-//        throw new DataException("Value document is missing or CDC operation is not a string");
-//      }
-//      CdcOperation op =
-//          operations.get(
-//              OperationType.fromText(doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue()));
-//      if (op == null) {
-//        throw new DataException(
-//            "No CDC operation found in mapping for op="
-//                + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
-//      }
-//      return op;
+      //      if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH) && doc.containsKey(DDL_FIELD_PATH)) {
+      //        return NOOP_CDC_OPERATION;
+      //      }
+      //
+      //      if (!doc.containsKey(OPERATION_TYPE_FIELD_PATH)
+      //          || !doc.get(OPERATION_TYPE_FIELD_PATH).isString()) {
+      //        throw new DataException("Value document is missing or CDC operation is not a
+      // string");
+      //      }
+      //      CdcOperation op =
+      //          operations.get(
+      //
+      // OperationType.fromText(doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue()));
+      //      if (op == null) {
+      //        throw new DataException(
+      //            "No CDC operation found in mapping for op="
+      //                + doc.get(OPERATION_TYPE_FIELD_PATH).asString().getValue());
+      //      }
+      //      return op;
     } catch (IllegalArgumentException exc) {
       throw new DataException("Parsing CDC operation failed", exc);
     }
