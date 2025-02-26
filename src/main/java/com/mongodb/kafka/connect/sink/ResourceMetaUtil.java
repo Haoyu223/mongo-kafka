@@ -31,12 +31,12 @@ final class ResourceMetaUtil {
     document =
         document.append(
             MongoResourceConstant.RESERVED_FIELD_CREATED_BY,
-            MongoResourceConstant.SINK_CONNECTOR_ID);
+            null);
     document = document.append(MongoResourceConstant.RESERVED_FIELD_CREATED_DATE, date);
     document =
         document.append(
             MongoResourceConstant.RESERVED_FIELD_UPDATED_BY,
-            MongoResourceConstant.SINK_CONNECTOR_ID);
+            null);
     document = document.append(MongoResourceConstant.RESERVED_FIELD_UPDATED_DATE, date);
 
     // add reserved field definition
