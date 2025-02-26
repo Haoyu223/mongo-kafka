@@ -3,7 +3,9 @@ package com.mongodb.kafka.connect.util.resource;
 public class MongoResourceConstant {
 
   public static final String RESOURCE_META = "resource_meta";
-  public static final String DEMO_TENANTID = "ddl_demo_tenant_id";
+  public static final String DEMO_TENANTID = "67be8f691af7795c85243d0e";
+  public static final String RES_PREFIX = "res";
+  public static final String BAR = "-";
   public static final String DEMO_RESOURCENAME = "ddl_demo_resource_name";
   public static final String TENANT_ID = "tenantId";
   public static final String RESOURCE_NAME = "resourceName";

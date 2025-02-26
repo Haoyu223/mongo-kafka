@@ -53,6 +53,7 @@ import com.mongodb.ConnectionString;
 import com.mongodb.kafka.connect.MongoDDLSinkConnector;
 import com.mongodb.kafka.connect.util.Validators;
 import com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider;
+import com.mongodb.kafka.connect.util.resource.MongoResourceConstant;
 
 public class MongoSinkConfig extends AbstractConfig {
   private static final String EMPTY_STRING = "";
@@ -73,6 +74,14 @@ public class MongoSinkConfig extends AbstractConfig {
           + " should be specified.";
   private static final String TOPICS_REGEX_DEFAULT = EMPTY_STRING;
   private static final String TOPICS_REGEX_DISPLAY = "Topics regex";
+
+  // custom field
+  public static final String TENANT_ID_CONFIG = "tenant.id.config";
+  private String tenantId = MongoResourceConstant.DEMO_TENANTID;
+
+  public String getTenantId() {
+    return tenantId;
+  }
 
   public static final String CONNECTION_URI_CONFIG = "connection.uri";
   private static final String CONNECTION_URI_DEFAULT = "mongodb://localhost:27017";
@@ -108,6 +117,8 @@ public class MongoSinkConfig extends AbstractConfig {
   public MongoSinkConfig(final Map<String, String> originals) {
     super(CONFIG, originals, false);
     this.originals = unmodifiableMap(originals);
+
+    this.tenantId = getString(TENANT_ID_CONFIG);
 
     topics =
         getList(TOPICS_CONFIG).isEmpty()

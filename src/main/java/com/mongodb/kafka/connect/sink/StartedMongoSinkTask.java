@@ -40,6 +40,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.result.DeleteResult;
 
 import com.mongodb.kafka.connect.sink.dlq.AnalyzedBatchFailedWithBulkWriteException;
 import com.mongodb.kafka.connect.sink.dlq.ErrorReporter;
@@ -190,7 +191,9 @@ final class StartedMongoSinkTask implements AutoCloseable {
 
   private void processCreateTable(final CreateTable createTable) {
     // could deal with createTable.isIfNotExists()
-    String table = createTable.getTable().getName().replaceAll(MongoResourceConstant.QUO, "");
+    String resourceName =
+        createTable.getTable().getName().replaceAll(MongoResourceConstant.QUO, "");
+    String table = buildCollection(resourceName);
     if (CollectionUtils.isNotEmpty(createTable.getColumnDefinitions())) {
       Map<String, String> contentMap =
           createTable.getColumnDefinitions().stream()
@@ -209,8 +212,8 @@ final class StartedMongoSinkTask implements AutoCloseable {
       // check schema meta exist or not
       Bson query =
           Filters.and(
-              Filters.eq(MongoResourceConstant.RESOURCE_NAME, table),
-              Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID));
+              Filters.eq(MongoResourceConstant.RESOURCE_NAME, resourceName),
+              Filters.eq(MongoResourceConstant.TENANT_ID, sinkConfig.getTenantId()));
       Document result =
           mongoClient
               .getDatabase(MongoResourceConstant.TEST_DATABASE)
@@ -232,22 +235,23 @@ final class StartedMongoSinkTask implements AutoCloseable {
         LOGGER.info(
             "resource_meta has exist record, create operation paused. table: {}, tenant: {}, message: {}",
             table,
-            MongoResourceConstant.DEMO_TENANTID,
+            sinkConfig.getTenantId(),
             result.toJson());
       }
     }
   }
 
   private void processAlter(final Alter alter) {
-    String table = alter.getTable().getName().replaceAll(MongoResourceConstant.QUO, "");
+    String resourceName = alter.getTable().getName().replaceAll(MongoResourceConstant.QUO, "");
+    //    String table = buildCollection(resourceName);
     for (AlterExpression expression : alter.getAlterExpressions()) {
       if (CollectionUtils.isNotEmpty(expression.getColDataTypeList())) {
 
         // check schema meta exist or not
         Bson query =
             Filters.and(
-                Filters.eq(MongoResourceConstant.RESOURCE_NAME, table),
-                Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID));
+                Filters.eq(MongoResourceConstant.RESOURCE_NAME, resourceName),
+                Filters.eq(MongoResourceConstant.TENANT_ID, sinkConfig.getTenantId()));
         Document result =
             mongoClient
                 .getDatabase(MongoResourceConstant.TEST_DATABASE)
@@ -257,6 +261,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
 
         if (result != null) {
           // todo might need to change DTO
+          LOGGER.info("resource_meta exist record: {}", result.toJson());
           List<ResourceFieldMetaDTO> resourceFieldMetaList =
               result.getList(MongoResourceConstant.RESOURCE_FIELD_LIST, ResourceFieldMetaDTO.class);
 
@@ -291,10 +296,26 @@ final class StartedMongoSinkTask implements AutoCloseable {
 
   private void processDrop(final Drop drop) {
     if (drop.getType() != null && drop.getType().equalsIgnoreCase(MongoResourceConstant.TABLE)) {
-      String table = drop.getName().getName().replaceAll(MongoResourceConstant.QUO, "");
-      // todo need to change database
+      String resourceName = drop.getName().getName().replaceAll(MongoResourceConstant.QUO, "");
+      String table = buildCollection(resourceName);
+
       mongoClient.getDatabase(MongoResourceConstant.TEST_DATABASE).getCollection(table).drop();
       LOGGER.info("dropped table success: {}", table);
+
+      Bson query =
+          Filters.and(
+              Filters.eq(MongoResourceConstant.RESOURCE_NAME, resourceName),
+              Filters.eq(MongoResourceConstant.TENANT_ID, sinkConfig.getTenantId()));
+      DeleteResult result =
+          mongoClient
+              .getDatabase(MongoResourceConstant.TEST_DATABASE)
+              .getCollection(MongoResourceConstant.RESOURCE_META)
+              .deleteMany(query);
+
+      LOGGER.info(
+          "delete resource_meta amount: {}, ack:{}",
+          result.getDeletedCount(),
+          result.wasAcknowledged());
     }
   }
 
@@ -388,6 +409,14 @@ final class StartedMongoSinkTask implements AutoCloseable {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  private String buildCollection(String src) {
+    return MongoResourceConstant.RES_PREFIX
+        + MongoResourceConstant.BAR
+        + sinkConfig.getTenantId()
+        + MongoResourceConstant.BAR
+        + src;
   }
 
   @Deprecated
