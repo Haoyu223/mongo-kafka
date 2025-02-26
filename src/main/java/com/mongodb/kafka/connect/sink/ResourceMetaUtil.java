@@ -28,15 +28,9 @@ final class ResourceMetaUtil {
             .append(MongoResourceConstant.RESERVED, schemaVO.getReserved());
 
     Date date = new Date();
-    document =
-        document.append(
-            MongoResourceConstant.RESERVED_FIELD_CREATED_BY,
-            null);
+    document = document.append(MongoResourceConstant.RESERVED_FIELD_CREATED_BY, null);
     document = document.append(MongoResourceConstant.RESERVED_FIELD_CREATED_DATE, date);
-    document =
-        document.append(
-            MongoResourceConstant.RESERVED_FIELD_UPDATED_BY,
-            null);
+    document = document.append(MongoResourceConstant.RESERVED_FIELD_UPDATED_BY, null);
     document = document.append(MongoResourceConstant.RESERVED_FIELD_UPDATED_DATE, date);
 
     // add reserved field definition

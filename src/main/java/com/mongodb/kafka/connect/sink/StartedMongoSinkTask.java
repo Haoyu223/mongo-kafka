@@ -260,10 +260,10 @@ final class StartedMongoSinkTask implements AutoCloseable {
                 .first();
 
         if (result != null) {
-          // todo might need to change DTO
+
           LOGGER.info("resource_meta exist record: {}", result.toJson());
-          List<ResourceFieldMetaDTO> resourceFieldMetaList =
-              result.getList(MongoResourceConstant.RESOURCE_FIELD_LIST, ResourceFieldMetaDTO.class);
+          List<Document> resourceFieldMetaList =
+              result.getList(MongoResourceConstant.RESOURCE_FIELD_LIST, Document.class);
 
           String operation = expression.getOperation().toString();
           Map<String, String> contentMap =
@@ -275,7 +275,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
                           (existing, replacement) -> existing,
                           HashMap::new));
 
-          List<ResourceFieldMetaDTO> dtos =
+          List<Document> dtos =
               updateResourceFieldMetaDTOS(resourceFieldMetaList, contentMap, operation);
           result.put(MongoResourceConstant.RESOURCE_FIELD_LIST, dtos);
 
@@ -288,7 +288,12 @@ final class StartedMongoSinkTask implements AutoCloseable {
                       result.get(MongoResourceConstant.RESERVED_FIELD_UNDERSCORE_ID)),
                   result);
 
-          LOGGER.info("Altered resource fields success: {}", result.toJson());
+          LOGGER.info("Alter resource fields success: {}", result.toJson());
+        } else {
+          LOGGER.info(
+              "resource_meta not found record:{}, tenantId:{}",
+              resourceName,
+              MongoResourceConstant.DEMO_TENANTID);
         }
       }
     }
@@ -357,11 +362,20 @@ final class StartedMongoSinkTask implements AutoCloseable {
     return resourceFieldMetaList;
   }
 
-  private List<ResourceFieldMetaDTO> updateResourceFieldMetaDTOS(
-      List<ResourceFieldMetaDTO> resourceFieldMetaDTOS,
-      Map<String, String> contentMap,
-      String operation) {
-    List<ResourceFieldMetaDTO> result = new ArrayList<>(resourceFieldMetaDTOS);
+  private Map<String, Object> convertToMap(Object obj) {
+    try {
+      ObjectMapper objectMapper = new ObjectMapper();
+      return objectMapper.convertValue(obj, new TypeReference<Map<String, Object>>() {});
+    } catch (Exception e) {
+      LOGGER.info("error parsing json: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private List<Document> updateResourceFieldMetaDTOS(
+      List<Document> resourceFieldMetaDTOS, Map<String, String> contentMap, String operation) {
+    List<Document> result = new ArrayList<>(resourceFieldMetaDTOS);
+
     if (operation != null && operation.equalsIgnoreCase(MongoResourceConstant.ADD)) {
       for (String column : contentMap.keySet()) {
         ResourceFieldMetaDTO fieldMetaDTO = new ResourceFieldMetaDTO();
@@ -370,22 +384,29 @@ final class StartedMongoSinkTask implements AutoCloseable {
         fieldDesc.put(Language.en.name(), column);
         fieldMetaDTO.setFieldDesc(fieldDesc);
         fieldMetaDTO.setRequired(true);
-        // todo extend
         fieldMetaDTO.setDataType(
             (contentMap.get(column).contains("TIME")
                     || contentMap.get(column).contains("DATE")
                     || contentMap.get(column).contains("YEAR"))
                 ? DataType.DATE
                 : DataType.STRING);
-        result.add(fieldMetaDTO);
+
+        Map<String, Object> fieldMap = convertToMap(fieldMetaDTO);
+
+        if (null != fieldMap) {
+          result.add(new Document(fieldMap));
+        }
       }
     } else if (operation != null
         && operation.equalsIgnoreCase(MongoResourceConstant.DROP)
         && !contentMap.isEmpty()) {
-      for (ResourceFieldMetaDTO dto : resourceFieldMetaDTOS) {
-        String fieldName = dto.getFieldName();
-        if (contentMap.containsKey(fieldName)) {
-          result.remove(dto);
+
+      for (Document dto : resourceFieldMetaDTOS) {
+
+        if (dto.containsKey("fieldName")) {
+          if (contentMap.containsKey(dto.get("fieldName").toString())) {
+            result.remove(dto);
+          }
         }
       }
     }
