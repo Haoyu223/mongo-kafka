@@ -222,7 +222,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
               .first();
       if (result == null) {
         // add a message to resource_meta
-        CreateResourceSchemaVO schemaVO = prepareResourceSchema(table, contentMap);
+        CreateResourceSchemaVO schemaVO = prepareResourceSchema(resourceName, contentMap);
         Document document = ResourceMetaUtil.generateDocumentFromResourceMetaDTO(schemaVO);
 
         // todo need to change database
@@ -234,7 +234,8 @@ final class StartedMongoSinkTask implements AutoCloseable {
       } else {
         LOGGER.info(
             "resource_meta has exist record, create operation paused. table: {}, tenant: {}, message: {}",
-            table, MongoResourceConstant.DEMO_TENANTID,
+            table,
+            MongoResourceConstant.DEMO_TENANTID,
             result.toJson());
       }
     }
@@ -319,14 +320,14 @@ final class StartedMongoSinkTask implements AutoCloseable {
   }
 
   private CreateResourceSchemaVO prepareResourceSchema(
-      String table, Map<String, String> contentMap) {
+      String resourceName, Map<String, String> contentMap) {
     CreateResourceSchemaVO createResourceSchemaVO = new CreateResourceSchemaVO();
     // todo fix demo
     createResourceSchemaVO.setTenantId(MongoResourceConstant.DEMO_TENANTID);
-    createResourceSchemaVO.setResourceName(table);
+    createResourceSchemaVO.setResourceName(resourceName);
 
     Map<String, String> resourceDisplayName = new LinkedHashMap<>();
-    resourceDisplayName.put(Language.en.name(), table);
+    resourceDisplayName.put(Language.en.name(), resourceName);
     createResourceSchemaVO.setResourceDisplayName(resourceDisplayName);
 
     List<ResourceFieldMetaDTO> resourceFieldMetaList = getResourceFieldMetaDTOS(contentMap);

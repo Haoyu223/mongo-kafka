@@ -53,7 +53,6 @@ import com.mongodb.ConnectionString;
 import com.mongodb.kafka.connect.MongoDDLSinkConnector;
 import com.mongodb.kafka.connect.util.Validators;
 import com.mongodb.kafka.connect.util.custom.credentials.CustomCredentialProvider;
-import com.mongodb.kafka.connect.util.resource.MongoResourceConstant;
 
 public class MongoSinkConfig extends AbstractConfig {
   private static final String EMPTY_STRING = "";
