@@ -213,7 +213,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       Bson query =
           Filters.and(
               Filters.eq(MongoResourceConstant.RESOURCE_NAME, resourceName),
-              Filters.eq(MongoResourceConstant.TENANT_ID, sinkConfig.getTenantId()));
+              Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID));
       Document result =
           mongoClient
               .getDatabase(MongoResourceConstant.TEST_DATABASE)
@@ -234,8 +234,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       } else {
         LOGGER.info(
             "resource_meta has exist record, create operation paused. table: {}, tenant: {}, message: {}",
-            table,
-            sinkConfig.getTenantId(),
+            table, MongoResourceConstant.DEMO_TENANTID,
             result.toJson());
       }
     }
@@ -251,7 +250,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
         Bson query =
             Filters.and(
                 Filters.eq(MongoResourceConstant.RESOURCE_NAME, resourceName),
-                Filters.eq(MongoResourceConstant.TENANT_ID, sinkConfig.getTenantId()));
+                Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID));
         Document result =
             mongoClient
                 .getDatabase(MongoResourceConstant.TEST_DATABASE)
@@ -305,7 +304,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
       Bson query =
           Filters.and(
               Filters.eq(MongoResourceConstant.RESOURCE_NAME, resourceName),
-              Filters.eq(MongoResourceConstant.TENANT_ID, sinkConfig.getTenantId()));
+              Filters.eq(MongoResourceConstant.TENANT_ID, MongoResourceConstant.DEMO_TENANTID));
       DeleteResult result =
           mongoClient
               .getDatabase(MongoResourceConstant.TEST_DATABASE)
@@ -414,7 +413,7 @@ final class StartedMongoSinkTask implements AutoCloseable {
   private String buildCollection(String src) {
     return MongoResourceConstant.RES_PREFIX
         + MongoResourceConstant.BAR
-        + sinkConfig.getTenantId()
+        + MongoResourceConstant.DEMO_TENANTID
         + MongoResourceConstant.BAR
         + src;
   }

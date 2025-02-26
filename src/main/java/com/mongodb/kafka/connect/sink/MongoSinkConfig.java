@@ -75,14 +75,6 @@ public class MongoSinkConfig extends AbstractConfig {
   private static final String TOPICS_REGEX_DEFAULT = EMPTY_STRING;
   private static final String TOPICS_REGEX_DISPLAY = "Topics regex";
 
-  // custom field
-  public static final String TENANT_ID_CONFIG = "tenant.id.config";
-  private String tenantId = MongoResourceConstant.DEMO_TENANTID;
-
-  public String getTenantId() {
-    return tenantId;
-  }
-
   public static final String CONNECTION_URI_CONFIG = "connection.uri";
   private static final String CONNECTION_URI_DEFAULT = "mongodb://localhost:27017";
   private static final String CONNECTION_URI_DISPLAY = "MongoDB Connection URI";
@@ -117,8 +109,6 @@ public class MongoSinkConfig extends AbstractConfig {
   public MongoSinkConfig(final Map<String, String> originals) {
     super(CONFIG, originals, false);
     this.originals = unmodifiableMap(originals);
-
-    this.tenantId = getString(TENANT_ID_CONFIG);
 
     topics =
         getList(TOPICS_CONFIG).isEmpty()
